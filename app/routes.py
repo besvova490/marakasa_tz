@@ -11,18 +11,22 @@ def products():
 
 
 @app.route('/products/<int:product_id>', methods=['GET'])
-@cache.cached(timeout=10)
+@cache.cached(timeout=15, query_string=True)
 def product_get(product_id):
     product = models.Product.query.get(product_id)
     if not product:
         return jsonify({'mas': 'Bad request'}), 400
     query = request.args
     page = query.get('page', 1, type=int)
-    product_reviews = product.reviews.paginate(page=page, per_page=1).items
-    product_reviews = [review.review for review in product_reviews]
+    per_page = query.get('per_page', 2, type=int)
+    product_reviews_pages = product.reviews.paginate(page=page,
+                                                     per_page=per_page)
+    product_reviews = [{'title': review.title, 'review': review.review}
+                       for review in product_reviews_pages.items]
     return jsonify({
-        'msg': 'Product page', 'item': product.to_dict(), 'current_page': page,
-        'review_pages': product.reviews.count(),
+        'msg': 'Product page', 'item': product.to_dict(),
+        'current_page': product_reviews_pages.page,
+        'pages': product_reviews_pages.pages,
         'review': product_reviews,
     }), 200
 
@@ -30,11 +34,11 @@ def product_get(product_id):
 @app.route('/products/<int:product_id>', methods=['PUT'])
 def product_put(product_id):
     product = models.Product.query.get(product_id)
-    review = request.json.get('review')
+    review = request.json.get('data')
     if not product or not review:
         return jsonify({'mas': 'Bad request'}), 400
     new_review = models.Review(
-        asin=product.asin, title=product.title, review=review,
+        asin=product.asin, title=review['title'], review=review['review'],
         product=product, product_id=product_id
     )
     db.session.add(new_review)
