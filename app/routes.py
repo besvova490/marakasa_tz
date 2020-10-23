@@ -7,7 +7,7 @@ from flask import jsonify, request
 def products():
     products_list = \
         [product.to_dict() for product in models.Product.query.all()]
-    return jsonify({'msg': 'All products', 'items': products_list}), 200
+    return jsonify({'message': 'All products', 'items': products_list}), 200
 
 
 @app.route('/products/<int:product_id>', methods=['GET'])
